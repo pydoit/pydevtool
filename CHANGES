@@ -1,0 +1,17 @@
+=======
+Changes
+=======
+
+
+0.2.0 (*unreleased*)
+====================
+
+- reporter: RichReporter, with color output and progress bar support
+
+
+0.1.0 (*2022-04-15*)
+====================
+
+Not released, part of SciPy `do.py`
+
+- cli: click integration with class based defintion
