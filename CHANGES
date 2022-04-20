@@ -7,7 +7,7 @@ Changes
 ====================
 
 - reporter: RichReporter, with color output and progress bar support.
-- linter: integration with pyflakes and pycodestyle.
+- linter: integration with pyflakes, pycodestyle and flake8.
 - cli: CliGroup, changes in basic usage API.
 
 
