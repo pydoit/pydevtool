@@ -9,7 +9,17 @@ doit interface is better suited for authring the development tasks.
 
 # USAGE:
 
-cli = CliGroup()
+```
+class CLI(CliGroup):
+    context = CONTEXT
+    run_doit_task = run_doit_task
+
+@click.group(cls=CLI)
+@click.pass_context
+def cli(ctx, **kwargs):
+    """Developer Tool"""
+    CLI.update_context(ctx, kwargs)
+```
 
 ## 1 - click API
 
@@ -98,7 +108,7 @@ from doit.task import Task as DoitTask
 
 
 
-class Context():
+class UnifiedContext():
     """Higher level to allow some level of Click.context with doit"""
     def __init__(self, options: dict):
         self.options = options
@@ -163,7 +173,7 @@ def run_as_py_action(cls):
 
 class MetaclassDoitTask(type):
     def __new__(meta_cls, name, bases, dct):
-        # params/opts from Context and Option attributes
+        # params/opts from UnifiedContext and Option attributes
         cls = super().__new__(meta_cls, name, bases, dct)
         params = []
         if ctx := getattr(cls, 'ctx', None):
@@ -217,8 +227,29 @@ class CliGroup(RichGroup):
             }
             return run_tasks(loader, tasks, extra_config={'GLOBAL': doit_config})
     """
-    COMMAND_CLASS = RichCommand
-    run_doit_task = None
+    command_class = RichCommand
+    context: UnifiedContext = None
+
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.params.extend(self.context.options.values())
+
+
+    @staticmethod
+    def run_doit_task():
+        raise NotImplementedError()
+
+    @classmethod
+    def update_context(cls, ctx:click.core.Context, kwargs:dict):
+        """copy received paramaters vals into group context
+
+        Typically to be included in the cli callback
+        """
+        ctx.ensure_object(dict)
+        for opt_name in cls.context.options.keys():
+            ctx.obj[opt_name] = kwargs.get(opt_name)
+
 
     def cls_cmd(self, name):
         """class decorator, convert to click.Command"""
@@ -232,13 +263,13 @@ class CliGroup(RichGroup):
             if issubclass(cls, Task):
                 # run as doit task
                 def callback(**kwargs):
-                    self.run_doit_task({name: kwargs})
+                    self.run_doit_task.__func__({name: kwargs})
             else:
                 # run as plain function
                 def callback(**kwargs):
                     cls.run(**kwargs)
 
-            click_cmd = RichCommand(
+            click_cmd = self.command_class(
                 name=name,
                 callback=callback,
                 help=cls.__doc__,

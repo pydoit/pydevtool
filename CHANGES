@@ -6,8 +6,9 @@ Changes
 0.2.0 (*unreleased*)
 ====================
 
-- reporter: RichReporter, with color output and progress bar support
-- linter: integration with pyflakes and pycodestyle
+- reporter: RichReporter, with color output and progress bar support.
+- linter: integration with pyflakes and pycodestyle.
+- cli: CliGroup, changes in basic usage API.
 
 
 0.1.0 (*2022-04-15*)
@@ -15,4 +16,4 @@ Changes
 
 Not released, part of SciPy `do.py`
 
-- cli: click integration with class based defintion
+- cli: click integration with class based defintion.
