@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.progress import Progress, BarColumn, TimeElapsedColumn
 from rich.theme import Theme
 from rich.panel import Panel
-from doit.exceptions import TaskFailed as DoitTaskFailed
+from doit.exceptions import UnmetDependency, TaskError, TaskFailed as DoitTaskFailed
 
 
 custom_theme = Theme({
@@ -120,11 +120,23 @@ class DoitRichReporter():
     def skip_ignore(self, task):
         self.update_progress(task, advance=1)
 
-    def add_failure(self, task, exception):
+    def add_failure(self, task, fail_info):
+        if task.has_subtask and isinstance(fail_info, UnmetDependency):
+            return
         if task.subtask_of:
             self.update_progress(task, advance=1)
-        if not isinstance(exception, DoitTaskFailed):
-            self.console.print(Panel(str(exception), title="Error"))
+        if fail_info.report:
+            if fail_info.traceback:
+                self.console.print(Panel(
+                    "".join(fail_info.traceback),
+                    title=f"{task.name}",
+                    subtitle=fail_info.message,
+                    border_style="red",
+                ))
+            else:
+                label = 'Error' if isinstance(fail_info, TaskError) else 'Failed'
+                self.console.print(f'[red]Task {label} - {task.name}'
+                                   f' => {fail_info.message}')
 
     def add_success(self, task):
         self.update_progress(task, advance=1)
@@ -137,6 +149,7 @@ class DoitRichReporter():
 
     def runtime_error(self, msg):
         self.console.print(Panel(msg, title="Error"))
+        # console.print("[red bold] msg")
 
     def teardown_task(self, task):
         """called when starts the execution of teardown action"""

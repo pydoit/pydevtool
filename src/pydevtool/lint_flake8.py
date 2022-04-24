@@ -1,6 +1,7 @@
 from flake8.main.application import Application as Flake8App
 from flake8.checker import FileChecker
 from flake8.formatting.default import Default as _Flake8Formatter
+from doit.exceptions import TaskFailed
 
 
 class Flake8Formatter(_Flake8Formatter):
@@ -46,4 +47,5 @@ class LintFlake8():
             )
             if has_reported_error:
                 success = False
-        return success
+        if(not success):
+            return TaskFailed('Check failed', report=False)
