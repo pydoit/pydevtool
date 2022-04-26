@@ -59,9 +59,44 @@ FLAKE8_PYFLAKES_CODES = {
     "F901": "RaiseNotImplemented",
 }
 
+
+
+class InlineNOQA:
+    """helper to read inline `# noqa` from files"""
+    def __init__(self, fn):
+        self.fn = fn
+        self.lines = None
+
+    def line(self, lineno):
+        if self.lines is None:
+            self.lines = open(self.fn, 'r').readlines()
+        line = self.lines[lineno-1]
+        codes = self._codes_from_comment(line)
+        if isinstance(codes, list):
+            return [FLAKE8_PYFLAKES_CODES.get(code, code) for code in codes]
+        return codes  # None or True
+
+    def _codes_from_comment(self, line):
+        """return codes from line"""
+        start = line.find('# noqa')
+        if start == -1:
+            return None  # Not found
+        code_start = start + 6  # 6 is len('# noqa')
+        str_codes = line[code_start:].split('#')[0]
+        if str_codes and str_codes[0] == ':':  # when `noqa:` check for codes
+            return [c.strip() for c in str_codes[1:].split(',')]
+        return True  # True means NOQA any code/message
+
+
+
+
 class FlakeRichReporter(FlakeReporter):
+    """
+    ignore: contains set of str with Pyflakes Message class names
+    """
     def __init__(self, console, ignore, convert_flake8_code=False):
         self.print = console.print
+        self.reported = 0
         self.convert_flake8_code = convert_flake8_code
         if convert_flake8_code:
             self.ignore = set()
@@ -72,11 +107,19 @@ class FlakeRichReporter(FlakeReporter):
                     self.ignore.add(key)
         else:
             self.ignore = set(ignore)
-        self.reported = 0
+        self.inline_noqa = None  # hack: must set the attribute directly
 
     def flake(self, msg):
-        if msg.__class__.__name__ in self.ignore:
+        msg_name = msg.__class__.__name__
+        if msg_name in self.ignore:
             return
+        # check for inline noqa
+        if self.inline_noqa:
+            noqa = self.inline_noqa.line(msg.lineno)
+            if noqa is True:
+                return
+            if noqa is not None and msg_name in noqa:
+                return
         self.reported += 1
         text = msg.message % msg.message_args
         self.print(f'{msg.filename}:{msg.lineno}:{msg.col+1} {msg.__class__.__name__} - {text}')
@@ -117,7 +160,8 @@ class FlakeRichReporter(FlakeReporter):
         self.print(Panel(f'{filename}: {msg}', title="Unexpected Error"))
 
 
-class LintPyflakes():
+
+class LintPyflakes:
     """pyflakes"""
     def __init__(self, console, config_file=None, config_section="flake8", convert_flake8_code=False):
         ignore = []
@@ -130,13 +174,20 @@ class LintPyflakes():
                         code = code.strip()
                         if code and code[0] == 'F':  # ignore codestyle
                             ignore.append(code)
+
         self.flake_reporter = FlakeRichReporter(console, ignore=ignore,
                                                 convert_flake8_code=convert_flake8_code)
+
 
     def __call__(self, fn):
         """execute pyflakes on a single file"""
         # checkPath() returns total flakes including ignored
         self.flake_reporter.reported = 0
+
+        # Ideally we would me creating a custom Checker,
+        # but no good way modify it on pyflakes...
+        # So we abuse the Reporter interface.
+        self.flake_reporter.inline_noqa = InlineNOQA(fn)
         checkPath(fn, reporter=self.flake_reporter)
         if(self.flake_reporter.reported != 0):
-            return TaskFailed('Check failed', report=True)
+            return TaskFailed('Check failed', report=False)
