@@ -241,7 +241,7 @@ class CliGroup(RichGroup):
         raise NotImplementedError()
 
     @classmethod
-    def update_context(cls, ctx:click.core.Context, kwargs:dict):
+    def update_context(cls, ctx: click.core.Context, kwargs: dict):
         """copy received paramaters vals into group context
 
         Typically to be included in the cli callback

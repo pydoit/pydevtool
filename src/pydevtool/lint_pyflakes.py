@@ -72,7 +72,7 @@ class InlineNOQA:
     def line(self, lineno):
         if self.lines is None:
             self.lines = open(self.fn, 'r').readlines()
-        line = self.lines[lineno-1]
+        line = self.lines[lineno - 1]
         codes = self._codes_from_comment(line)
         if isinstance(codes, list):
             return [FLAKE8_PYFLAKES_CODES.get(code, code) for code in codes]
@@ -102,7 +102,7 @@ class FlakeRichReporter(FlakeReporter):
         if convert_flake8_code:
             self.ignore = set()
             for key in ignore:
-                if item:=FLAKE8_PYFLAKES_CODES.get(key):
+                if item := FLAKE8_PYFLAKES_CODES.get(key):
                     self.ignore.add(item)
                 else:
                     self.ignore.add(key)
@@ -123,7 +123,8 @@ class FlakeRichReporter(FlakeReporter):
                 return
         self.reported += 1
         text = msg.message % msg.message_args
-        self.print(f'{msg.filename}:{msg.lineno}:{msg.col+1} {msg.__class__.__name__} - {text}')
+        self.print(f"{msg.filename}:{msg.lineno}:{msg.col+1} ",
+                   f"{msg_name} - {text}")
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
@@ -164,7 +165,8 @@ class FlakeRichReporter(FlakeReporter):
 
 class LintPyflakes:
     """pyflakes"""
-    def __init__(self, console, config_file=None, config_section="flake8", convert_flake8_code=False):
+    def __init__(self, console, config_file=None, config_section="flake8",
+                 convert_flake8_code=False):
         pyflakes_config = None
         if config_file:
             config = RawConfigParser()

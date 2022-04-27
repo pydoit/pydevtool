@@ -4,7 +4,7 @@ import pycodestyle
 
 
 class CodeStyleRichReporter(pycodestyle.BaseReport):
-    console = None # must be assigned after creation
+    console = None  # must be assigned after creation
 
     def __init__(self, options):
         super().__init__(options)
@@ -60,4 +60,4 @@ class LintCodeStyle():
     def __call__(self, fn):
         """execute pyflakes and pycodestyle on single file"""
         style_result = self.style.input_file(fn)
-        return style_result==0
+        return style_result == 0
