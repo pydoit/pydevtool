@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pycodestyle
 
 
@@ -42,6 +44,18 @@ class LintCodeStyle():
         style_reporter = style.init_report(CodeStyleRichReporter)
         style_reporter.console = console
         self.style = style
+        # FIXME: hack to convert exlude dirs into patterns
+        self.style.options.exclude = [
+            p if p.endswith('.py') else f'{p}/*'
+            for p in self.style.options.exclude]
+
+
+    def iter_paths(self, paths):
+        for path in paths:
+            for match in Path(path).rglob('*.py'):
+                fname = str(match)
+                if not self.style.excluded(fname):
+                    yield fname
 
     def __call__(self, fn):
         """execute pyflakes and pycodestyle on single file"""

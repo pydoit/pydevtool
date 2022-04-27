@@ -6,6 +6,8 @@ from rich.panel import Panel
 from pyflakes.api import checkPath
 from pyflakes.reporter import Reporter as FlakeReporter
 
+from .path import rglob
+
 
 # based on flake8 4.0:  src/flake8/plugins/pyflakes.py
 FLAKE8_PYFLAKES_CODES = {
@@ -97,7 +99,6 @@ class FlakeRichReporter(FlakeReporter):
     def __init__(self, console, ignore, convert_flake8_code=False):
         self.print = console.print
         self.reported = 0
-        self.convert_flake8_code = convert_flake8_code
         if convert_flake8_code:
             self.ignore = set()
             for key in ignore:
@@ -164,20 +165,31 @@ class FlakeRichReporter(FlakeReporter):
 class LintPyflakes:
     """pyflakes"""
     def __init__(self, console, config_file=None, config_section="flake8", convert_flake8_code=False):
-        ignore = []
+        pyflakes_config = None
         if config_file:
             config = RawConfigParser()
             config.read(config_file)
             if config.has_section(config_section):
-                if ignore_str := config[config_section].get('ignore'):
-                    for code in ignore_str.split(','):
-                        code = code.strip()
-                        if code and code[0] == 'F':  # ignore codestyle
-                            ignore.append(code)
+                pyflakes_config = config[config_section]
 
-        self.flake_reporter = FlakeRichReporter(console, ignore=ignore,
+        # config values
+        self.ignore = None
+        self.exclude = None
+        if pyflakes_config:
+            # ignore: ignore messages/codes
+            if ignore_str := pyflakes_config.get('ignore'):
+                self.ignore = [c.strip() for c in ignore_str.split(',') if c.strip()]
+
+            # exclude: exclude files/paths
+            if exclude_str := pyflakes_config.get('exclude'):
+                self.exclude = [p.strip() for p in exclude_str.split(',') if p.strip()]
+
+        self.flake_reporter = FlakeRichReporter(console, ignore=self.ignore,
                                                 convert_flake8_code=convert_flake8_code)
 
+
+    def iter_paths(self, paths):
+        yield from rglob(paths, exclude=self.exclude)
 
     def __call__(self, fn):
         """execute pyflakes on a single file"""
