@@ -100,6 +100,7 @@ class RefguideCheck(Task):
 '''
 
 import re
+import sys
 
 import click
 from click.globals import get_current_context
@@ -263,11 +264,11 @@ class CliGroup(RichGroup):
             if issubclass(cls, Task):
                 # run as doit task
                 def callback(**kwargs):
-                    self.run_doit_task.__func__({name: kwargs})
+                    sys.exit(self.run_doit_task.__func__({name: kwargs}))
             else:
                 # run as plain function
                 def callback(**kwargs):
-                    cls.run(**kwargs)
+                    sys.exit(cls.run(**kwargs))
 
             click_cmd = self.command_class(
                 name=name,
